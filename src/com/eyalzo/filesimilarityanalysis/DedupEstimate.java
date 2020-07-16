@@ -173,10 +173,18 @@ public class DedupEstimate {
 				String nameToPrint = (new File(curFileName)).getName();
 
 				// Print
-				serial++;
-				System.out.println(String.format("%-6d %,13d %4d %,9d %,9d %,13d %,13d %10.3f%% %s", serial,
-						file.length(), maskBits, file.length() / curChunkList.size(), curChunkList.size(),
-						curSelfDedupBytes, curGlobalDedupBytes, overlapRatio, nameToPrint));
+                serial++;
+                if(curChunkList.size() == 0){
+                    System.out.println(String.format("%-6d %,13d %4d %,9d %,9d %,13d %,13d %10.3f%% %s", serial,
+                    file.length(), maskBits, file.length(), curChunkList.size(),
+                    curSelfDedupBytes, curGlobalDedupBytes, overlapRatio, nameToPrint));
+                }
+                else{
+                    System.out.println(String.format("%-6d %,13d %4d %,9d %,9d %,13d %,13d %10.3f%% %s", serial,
+                    file.length(), maskBits, file.length() / curChunkList.size(), curChunkList.size(),
+                    curSelfDedupBytes, curGlobalDedupBytes, overlapRatio, nameToPrint));
+                }
+				
 			}
 
 			// End of files look

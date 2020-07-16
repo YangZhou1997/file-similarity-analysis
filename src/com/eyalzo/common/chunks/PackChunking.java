@@ -364,10 +364,12 @@ public class PackChunking {
 
 				int chunkLen = tempAnchor - prevAnchor;
 
-                // Signature
-				long sha1 = calcSha1(buffer, prevAnchor, chunkLen);
-                chunkList.add(chunkCode(sha1, chunkLen));
-
+                if(chunkLen != 0){
+                    // Signature
+                    long sha1 = calcSha1(buffer, prevAnchor, chunkLen);
+                    chunkList.add(chunkCode(sha1, chunkLen));
+                }
+                
                 // If the last chunk is too small
                 if (chunkLen < minChunkSize)
                     return prevAnchor;
