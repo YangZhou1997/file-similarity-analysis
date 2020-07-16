@@ -316,6 +316,89 @@ public class PackChunking {
 		return anchorCount(buffer, 0, buffer.length);
 	}
 
+
+	/**
+	 * Get chunks in a given buffer, with limits on minimal or maximal chunk size. It assumes that the start offset is the beginning of a chunk but the last bytes
+	 * are not.
+	 * <p>
+	 * When using for statistical analysis, beware that anchors cannot be found in the last 47 offsets, because of the sliding window size (48). The last chunk is
+	 * added only if it si not too small and also asked specifically.
+	 * 
+	 * @param buffer
+	 *            The given byte buffer.
+	 * @param startOffsetInc
+	 *            Start offset (0-based) of the search. The first anchor can be found in this offset, but involving the 47 bytes after it.
+	 * @param endOffsetExc
+	 *            Exclusive 0-based end offset of the search. The last anchor can be found only 48 bytes before that offset.
+	 * @param addLastChunk
+	 *            Use true only if this buffer is the end of a stream/file. Otherwise, the returned offset should be used for further processing. If true the last
+	 *            chunk is added too, though it might be too small.
+	 * @return Number of used bytes which is the offset of the byte right after the last byte of the last found anchor. Zero on input error or when not even one
+	 *         anchor was found and buffer length does not exceed the maximum chunk size.
+	 */
+	public int getChunksAll(Collection<Long> chunkList, byte[] buffer, int startOffsetInc, int endOffsetExc) {
+		// Get the anchor list
+		LinkedList<Integer> anchorList = getAnchors(buffer, startOffsetInc, endOffsetExc);
+		if (anchorList == null){
+            // Signature
+            int chunkLen = endOffsetExc - startOffsetInc;
+			long sha1 = calcSha1(buffer, startOffsetInc, chunkLen);
+            chunkList.add(chunkCode(sha1, chunkLen));
+            return 0;
+        }
+
+		//
+		// Get ready for the first chunk
+		//
+		int prevAnchor = startOffsetInc;
+		Iterator<Integer> it = anchorList.iterator();
+		Integer curAnchor = it.hasNext() ? it.next() : null;
+
+		// On the first round we already have a "previous" and maybe a "current"
+
+		while (true) {
+			// If reached end of block or next anchor is too far
+			if (curAnchor == null || (curAnchor - prevAnchor) > maxChunkSize) {
+				// Chunk end at the largest allowed chunk or end of block
+				int tempAnchor = Math.min(prevAnchor + maxChunkSize, endOffsetExc);
+
+				int chunkLen = tempAnchor - prevAnchor;
+
+                // Signature
+				long sha1 = calcSha1(buffer, prevAnchor, chunkLen);
+                chunkList.add(chunkCode(sha1, chunkLen));
+
+                // If the last chunk is too small
+                if (chunkLen < minChunkSize)
+                    return prevAnchor;
+            
+				prevAnchor = tempAnchor;
+				continue;
+			}
+
+			// If the anchor is too close
+			if ((curAnchor - prevAnchor) < minChunkSize) {
+				// Skip the anchor and look for the next one
+				curAnchor = it.hasNext() ? it.next() : null;
+				continue;
+			}
+
+			// Here the anchor is fine: ok from first place or fixed
+
+			// Chunk length
+			int chunkLen = curAnchor - prevAnchor;
+			// Calculate SHA-1 on the array from previous anchor (inclusive) to
+			// the current (exclusive)
+			long sha1 = calcSha1(buffer, prevAnchor, chunkLen);
+			chunkList.add(chunkCode(sha1, chunkLen));
+
+			// Next anchor
+			prevAnchor = curAnchor;
+			curAnchor = it.hasNext() ? it.next() : null;
+		}
+	}
+
+
 	/**
 	 * Get chunks in a given buffer, with limits on minimal or maximal chunk size. It assumes that the start offset is the beginning of a chunk but the last bytes
 	 * are not.
